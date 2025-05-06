@@ -1,6 +1,61 @@
+#每一段为一个攻略源，可点击合集链接查看攻略图片样式，不满意的自行删除
+
+- source: HoYo青枫
+  collection_id: 
+    - 2716049
+    - 2873176
+
+      # 正式服合集链接 https://www.miyoushe.com/zzz/collection/2716049
+      # 体验服合集链接 https://www.miyoushe.com/zzz/collection/2873176
+
+- source: 小橙子阿
+  collection_id: 
+    - 3032407
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/3032407
+
+- source: 紫喵Azunya
+  collection_id:
+    - 2722878
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2722878 
+
 - source: Asgater
   collection_id:
     - 2723511
+    - 2618970
+
+      # 正式服合集链接 https://www.miyoushe.com/zzz/collection/2723511
+      # 体验服合集链接 https://www.miyoushe.com/zzz/collection/2618970
+
+- source: OH是姜姜呀
+  collection_id: 
+    - 2724962
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2724962
+
 - source: 新艾利都快讯
   collection_id:
     - 2712859
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2712859
+
+- source: 猫冬
+  collection_id: 
+    - 2724610
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2724610
+
+- source: 紫罗兰打烊啦
+  collection_id: 
+    - 2726687
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2726687
+
+- source: 洛羽Lox
+  collection_id: 
+    - 2722693
+
+      # 合集链接 https://www.miyoushe.com/zzz/collection/2722693
+
+      

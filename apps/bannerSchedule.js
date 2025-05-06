@@ -4,7 +4,7 @@ import Banner from '../model/banner.js'
 export class bannerSchedule extends plugin {
   constructor () {
     super({
-      name: '复刻表',
+      name: '摩拉复刻表',
       dsc: '复刻时间表',
       event: 'message',
       priority: 5,
@@ -14,7 +14,7 @@ export class bannerSchedule extends plugin {
           fnc: 'bannerSchedule'
         },
         {
-          reg: '^#(原神|星铁|绝区零)?\\S+(复刻|卡池)$',
+          reg: '^#(原神|星铁|绝区零)?\\S+(祈愿|卡池)$',
           fnc: 'bannerCount'
         }
       ]

@@ -91,7 +91,7 @@ export class moraHelp extends plugin {
         }
       })
     } else if (manual) {
-      command = `git clone --depth=1 https://gitee.com/Rrrrrrray/mora-plugin-res.git "${this.resPath}"`
+      command = `git clone --depth=1 https://gitcode.com/JIUX/mora-plugin-res.git "${this.resPath}"`
       exec(command, (error, stdout, stderr) => {
         if (error) {
           this.e.reply(`资源包安装失败！\nError code: ${error.code}\n${error.stack}\n 请稍后重试。`)

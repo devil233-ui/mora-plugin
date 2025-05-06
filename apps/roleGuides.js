@@ -13,13 +13,13 @@ import RoleGuide from '../model/roleGuide.js'
 export class roleGuides extends plugin {
   constructor () {
     super({
-      name: '米游社角色攻略',
+      name: '摩拉米游社角色攻略',
       dsc: '米游社角色攻略',
       event: 'message',
       priority: 5,
       rule: [
         {
-          reg: '^#?(星铁|绝区零)?(更新)?\\S+(攻略|一图流)$',
+          reg: '^#?(星铁|绝区零)?(更2222新)?\\S+(攻略|一图流|配对|配队)$',
           fnc: 'roleGuide'
         },
         {
@@ -50,7 +50,7 @@ export class roleGuides extends plugin {
 
   /** 角色一图流 */
   async roleGuide () {
-    let match = /^#?(星铁|绝区零)?(更新)?(\S+)(攻略|一图流)$/.exec(this.e.msg)
+    let match = /^#?(星铁|绝区零)?(更新)?(\S+)(攻略|一图流|配对|配队)$/.exec(this.e.msg)
     let isUpdate = !!match[2]
     let roleName = match[3]
 
