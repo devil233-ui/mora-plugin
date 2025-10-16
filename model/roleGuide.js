@@ -165,7 +165,7 @@ export default class roleGuide extends moraBase {
             if (success) msg.push(dir[i])
         }
 
-        msg = _(msg).concat(add_dir).uniq().map(v => segment.image(v)).value()
+        msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
 
         if (_.isEmpty(msg)) {
             await this.e.reply(`星铁暂无角色 ${role.name} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
@@ -227,7 +227,7 @@ export default class roleGuide extends moraBase {
             if (success) msg.push(dir[i])
         }
 
-        msg = _(msg).concat(add_dir).uniq().map(v => segment.image(v)).value()
+        msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
         if (_.isEmpty(msg)) {
             await this.e.reply(`绝区零暂无角色 ${role.name} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
             return false
