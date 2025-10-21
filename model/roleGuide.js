@@ -379,11 +379,91 @@ export default class roleGuide extends moraBase {
 
     /**
      * 下载攻略图
+     * 优化：优先从本地 strategy 目录下的作者 json 文件里取 url，
+     * 如果找不到或下载失败，才回退到米游社接口抓取。
      * @param {String} name 角色名
-     * @param {Object} author 作者
+     * @param {Object} author 作者（必须包含 source、collection_id 等）
      */
     async getImg(name, author, sfPath, filter = '') {
+        // helper: 从本地 strategy JSON 目录中查找作者对应的 url
+        const tryLocalStrategy = async () => {
+            try {
+                const strategyDir = path.join(`${_path}/plugins/mora-plugin/Strategyresources/strategy`)
+                if (!fs.existsSync(strategyDir)) return null
+
+                const files = fs.readdirSync(strategyDir).filter(f => f.endsWith('.json'))
+                const gameKey = this.isSr ? 'StarRail' : (this.game === 'zzz' ? 'ZenlessZoneZero' : '')
+
+                for (const file of files) {
+                    const fp = path.join(strategyDir, file)
+                    let content
+                    try {
+                        content = fs.readFileSync(fp, 'utf8')
+                    } catch (err) {
+                        logger.warn(`读取本地策略文件失败：${fp}，跳过。错误：${err}`)
+                        continue
+                    }
+                    let json
+                    try {
+                        json = JSON.parse(content)
+                    } catch (err) {
+                        logger.warn(`解析本地策略 JSON 失败：${fp}，跳过。错误：${err}`)
+                        continue
+                    }
+
+                    // json 里的顶层 key 预期为作者名（例如 "HoYo青枫"）
+                    for (const [authorKey, authorVal] of Object.entries(json)) {
+                        if (!authorKey) continue
+                        // 必须匹配作者名，保证作者正确
+                        if (authorKey !== author.source) continue
+
+                        // authorVal 结构预期包含 gameKey ('' / 'StarRail' / 'ZenlessZoneZero') -> array of {name, link}
+                        const list = (authorVal && (authorVal[gameKey] || authorVal[''])) || []
+                        if (!Array.isArray(list)) continue
+
+                        // 尝试精确匹配 name > 包含匹配作为降级
+                        let entry = list.find(i => i.name === name)
+                        if (!entry) entry = list.find(i => i.name && i.name.includes(name))
+
+                        if (entry && entry.link) {
+                            return entry.link
+                        }
+                    }
+                }
+                return null
+            } catch (err) {
+                logger.warn(`本地策略查找出错：${err}`)
+                return null
+            }
+        }
+
+        // 先试本地
+        try {
+            const localUrl = await tryLocalStrategy()
+            if (localUrl) {
+                logger.mark(`${this.e.logFnc} 从本地策略文件(${author.source})获取 ${name} 的图片，下载地址：${localUrl}`)
+                // 本地 json 内的链接一般为完整图片地址，不追加 this.oss
+                if (!await commonTools.download(localUrl, sfPath)) {
+                    logger.warn(`${this.e.logFnc} 本地链接下载失败，回退到米游社抓取：${localUrl}`)
+                    // 继续走米游社逻辑 below
+                } else {
+                    logger.mark(`${this.e.logFnc} 下载本地策略图片成功：${author.source}-${name}`)
+                    return true
+                }
+            }
+        } catch (err) {
+            logger.warn(`尝试本地策略下载时发生异常：${err}`)
+            // 继续到米游社抓取
+        }
+
+        // fallback to existing 米游社抓取逻辑
         let msyRes = []
+        // collection_id 必须存在并且作者对象保持一致
+        if (!author || !author.collection_id) {
+            logger.warn(`作者 ${author?.source} 未提供 collection_id，且本地策略未命中，无法从米游社抓取`)
+            return false
+        }
+
         for (const i of author.collection_id) {
             msyRes.push(await commonTools.getFetchData(this.url + i))
         }
