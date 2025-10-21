@@ -5,7 +5,7 @@ import _ from 'lodash'
 import fs from 'node:fs'
 import fetch from 'node-fetch'
 import path from 'path'
-import { exec } from 'child_process'
+import { CronJob } from 'cron'
 /**
  * 借鉴原云崽攻略代码
  * 攻略来自NGA@妮可少女
@@ -45,21 +45,19 @@ export class abyssVersion extends plugin {
       ]
     })
 
-        // Abyss 目录
-        this.abyssDir = path.join(process.cwd(), 'data', 'Abyss')
-        if (!fs.existsSync(this.abyssDir)) {
-            fs.mkdirSync(this.abyssDir, { recursive: true })
-        }
-        // 设置cron任务，每15天删除一次data/Abyss目录
-        const cronExpression = '0 0 */15 * *';
-        const job = new CronJob(cronExpression, () => {
-            if (fs.existsSync(this.abyssDir)) {
-                fs.rmSync(this.abyssDir, { recursive: true, force: true });
-                console.log('Deleted data/Abyss directory.');
-                // 重新创建目录
-                fs.mkdirSync(this.abyssDir, { recursive: true });
-            }
-        }, null, true);
+    // Abyss 目录
+    this.abyssDir = path.join(process.cwd(), 'data', 'Abyss')
+    if (!fs.existsSync(this.abyssDir)) {
+      fs.mkdirSync(this.abyssDir, { recursive: true })
+    }
+    const cron = '0 0 1/10 * *' // 5 字段：每 10 天的 00:00 执行一次（minute hour day month weekday）
+    this.task = {
+      name: '[摩拉深渊版本]data/Abyss 自动清理',
+      cron: cron,
+      fnc: () => {
+        this.cleanAbyssDir();
+      }
+    }
   }
 
   // 静态别名数据（正则和功能共用）
@@ -290,6 +288,17 @@ export class abyssVersion extends plugin {
     if (!fs.existsSync(path)) {
       await this.e.reply(moracfg.resNotFound, true)
       return false
+    }
+  }
+  async cleanAbyssDir() {
+    try {
+      if (fs.existsSync(this.abyssDir)) {
+        fs.rmSync(this.abyssDir, { recursive: true, force: true })
+      }
+      fs.mkdirSync(this.abyssDir, { recursive: true })
+      console.log('[Abyss] 已清理并重建 data/Abyss 目录')
+    } catch (err) {
+      console.error('[Abyss] 清理 data/Abyss 目录出错：', err)
     }
   }
 }
