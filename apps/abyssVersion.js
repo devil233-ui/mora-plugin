@@ -45,11 +45,21 @@ export class abyssVersion extends plugin {
       ]
     })
 
-    // Abyss 目录
-    this.abyssDir = path.join(process.cwd(), 'data', 'Abyss')
-    if (!fs.existsSync(this.abyssDir)) {
-      fs.mkdirSync(this.abyssDir, { recursive: true })
-    }
+        // Abyss 目录
+        this.abyssDir = path.join(process.cwd(), 'data', 'Abyss')
+        if (!fs.existsSync(this.abyssDir)) {
+            fs.mkdirSync(this.abyssDir, { recursive: true })
+        }
+        // 设置cron任务，每15天删除一次data/Abyss目录
+        const cronExpression = '0 0 */15 * *';
+        const job = new CronJob(cronExpression, () => {
+            if (fs.existsSync(this.abyssDir)) {
+                fs.rmSync(this.abyssDir, { recursive: true, force: true });
+                console.log('Deleted data/Abyss directory.');
+                // 重新创建目录
+                fs.mkdirSync(this.abyssDir, { recursive: true });
+            }
+        }, null, true);
   }
 
   // 静态别名数据（正则和功能共用）
