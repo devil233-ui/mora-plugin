@@ -80,12 +80,7 @@ export default class roleGuide extends moraBase {
         }
 
         msg = _.map(_.uniq(msg), v => segment.image(v))
-        if (_.isEmpty(msg)) {
-            await this.e.reply(`原神暂无角色 ${role.name} 的攻略数据\n原神攻略发送 #胡桃攻略\n星铁攻略发送 *流萤攻略\n绝区零攻略发送 %柳攻略\n\n原神主角攻略发送 #风主攻略 #火主攻略`, false, { at: false, recallMsg: 30 })
-            return false
-        }
-
-        return await commonTools.makeMsg(this.e, msg, `${role.name}攻略 来啦~ \n（本攻略由 mora-plugin 插件提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
+        return await this.replyStrategies(msg, role.name)
     }
 
     async srStrategies(name, isUpdate) {
@@ -113,7 +108,7 @@ export default class roleGuide extends moraBase {
                 console.error('Failed to load aliases:', error);
                 return role; // 返回空对象作为兜底
             }
-        }     
+        }
 
         async function getFormalName(role) {        // 根据传入的值查找对应的正式名称
             const defAlias = await loadAliases();
@@ -166,13 +161,7 @@ export default class roleGuide extends moraBase {
         }
 
         msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
-
-        if (_.isEmpty(msg)) {
-            await this.e.reply(`星铁暂无角色 ${role.name} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
-            return false
-        }
-
-        return await commonTools.makeMsg(this.e, msg, `${role.name}攻略 来啦~ \n（本攻略由 mora-plugin 插件提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
+        return await this.replyStrategies(msg, role.name)
     }
 
     async zzzStrategies(name, isUpdate) {
@@ -228,12 +217,20 @@ export default class roleGuide extends moraBase {
         }
 
         msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
+        return await this.replyStrategies(msg, role.name)
+    }
+    async replyStrategies(msg, name) {
+        const zones = {
+            gs: '原神',
+            sr: '星铁',
+            zzz: '绝区零'
+        }
         if (_.isEmpty(msg)) {
-            await this.e.reply(`绝区零暂无角色 ${role.name} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
+            await this.e.reply(`暂无角色 ${zones[this.game]} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
             return false
         }
 
-        return await commonTools.makeMsg(this.e, msg, `${role.name}攻略 来啦~ \n（本攻略由 mora-plugin 插件提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
+        return await commonTools.makeMsg(this.e, msg, `${name}攻略 来啦~ \n（本攻略由 mora-plugin 插件提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
     }
 
     async getHelp() {
