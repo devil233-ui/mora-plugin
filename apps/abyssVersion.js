@@ -87,13 +87,19 @@ export class abyssVersion extends plugin {
     const url = `https://homdgcat.wiki/Abyss/CH/${imgV}.png`
     const local = path.join(this.abyssDir, `${imgV}.png`)
     try {
+      logger.mark(`[深渊版本] 尝试下载图片: ${url}`)
       const res = await fetch(url)
       if (res.ok) {
         const arrayBuffer = await res.arrayBuffer()
         fs.writeFileSync(local, Buffer.from(arrayBuffer))
+        logger.mark(`[深渊版本] 图片下载成功: ${imgV}.png`)
         return true
+      } else {
+        logger.warn(`[深渊版本] 图片下载失败 ${imgV}.png: HTTP ${res.status}`)
       }
-    } catch (e) { }
+    } catch (e) {
+      logger.error(`[深渊版本] 图片下载异常 ${imgV}.png:`, e)
+    }
     return false
   }
 
@@ -102,15 +108,19 @@ export class abyssVersion extends plugin {
     const local = path.join(this.abyssDir, `${imgV}.png`)
     if (fs.existsSync(local)) {
       // 优先本地图片
+      logger.mark(`[深渊版本] 使用本地图片: ${imgV}.png`)
       return segment.image(local)
     } else {
       // 没有则自动下载图片
+      logger.mark(`[深渊版本] 本地图片不存在，尝试下载: ${imgV}.png`)
       const downloaded = await this.downloadImage(imgV)
       if (downloaded && fs.existsSync(local)) {
+        logger.mark(`[深渊版本] 下载成功，使用下载的图片: ${imgV}.png`)
         return segment.image(local)
       } else {
-        // fallback 到远程链接（理论上下载失败才走这里）
-        return segment.image(`https://homdgcat.wiki/Abyss/CH/${imgV}.png`)
+        // 下载失败时不发送图片
+        logger.warn(`[深渊版本] 图片获取失败，跳过发送: ${imgV}.png`)
+        return null
       }
     }
   }
@@ -123,11 +133,17 @@ export class abyssVersion extends plugin {
     for (let segVer of segList) {
       let imgUrl = `${baseUrl}${segVer}.jpg`
       try {
+        logger.mark(`[深渊版本] 检查剧诗图片: ${imgUrl}`)
         let res = await fetch(imgUrl, { method: 'HEAD' })
         if (res.ok) {
+          logger.mark(`[深渊版本] 剧诗图片存在，添加到发送列表: ${segVer}.jpg`)
           imageSegments.push(segment.image(imgUrl))
+        } else {
+          logger.warn(`[深渊版本] 剧诗图片不存在，跳过: ${segVer}.jpg (HTTP ${res.status})`)
         }
-      } catch (e) { }
+      } catch (e) {
+        logger.error(`[深渊版本] 检查剧诗图片异常，跳过: ${segVer}.jpg`, e)
+      }
     }
     return imageSegments
   }
@@ -215,17 +231,20 @@ export class abyssVersion extends plugin {
     // 直接使用3个图片（优先本地，没有则自动下载再发本地）
     let imageSegments = []
     if (game === 'ys' && this.matchType(formalAbyss, game, '深境螺旋')) {
+      logger.mark(`[深渊版本] 处理原神深境螺旋图片，版本: ${imgVersion}`)
       let segList = [`${imgVersion}`, `${imgVersion}A`, `${imgVersion}B`]
       for (let segVer of segList) {
         let seg = await this.getImageSegment(segVer)
         if (seg) imageSegments.push(seg)
       }
     } else {
+      logger.mark(`[深渊版本] 处理${game === 'sr' ? '星铁' : '原神'}图片，版本: ${imgVersion}`)
       let mainSeg = await this.getImageSegment(imgVersion)
       if (mainSeg) imageSegments.push(mainSeg)
     }
 
     if (imageSegments.length > 0) {
+      logger.mark(`[深渊版本] 成功获取 ${imageSegments.length} 张图片，准备发送`)
       let msg = [
         `${game === 'sr' ? '星铁' : '原神'} ${version} ${formalAbyss}\n来源：妮可少女`
       ]
@@ -233,6 +252,7 @@ export class abyssVersion extends plugin {
       await this.e.reply(msg)
       return true
     } else {
+      logger.warn(`[深渊版本] 未能获取任何图片: ${game === 'sr' ? '星铁' : '原神'} ${version} ${formalAbyss}`)
       await this.e.reply(`暂无${game === 'sr' ? '星铁' : '原神'} ${version}版本的${formalAbyss}图片`)
       return false
     }
