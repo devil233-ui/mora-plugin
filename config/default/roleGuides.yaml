@@ -1,3 +1,8 @@
+# 使用默认攻略源
+# 开启时读取 config/default/roleGuides.yaml，关闭时读取 config/user/roleGuides.yaml
+
+ALL: false
+
 #每一段为一个攻略源，可点击合集链接查看攻略图片样式，不满意的自行删除
 
 olds:  #不能改
@@ -50,14 +55,30 @@ news:
 
       # 草 合集链接 https://www.miyoushe.com/ys/collection/2319299
 
-
-
   - source: 荧岁镇太辰
     collection_id: 
       - 2558464
 
       # 合集链接 https://www.miyoushe.com/ys/collection/2558464
 
+  - source: 地底Tv
+    collection_id: 
+      - 2342915
+
+      # 合集链接 https://www.miyoushe.com/ys/collection/2342915
+
+  - source: 祖安水稻公主
+    collection_id: 
+      - 159938966  # 合集多，使用主页id代替
+
+      # 主页链接 https://www.miyoushe.com/ys/accountCenter/postList?id=159938966
+
+  - source: 关蝎
+    collection_id: 
+      - 2473903
+
+      # 合集链接 https://www.miyoushe.com/ys/collection/2473903
+  
   - source: 洛羽Lox
     collection_id: 
       - 2489120
@@ -79,9 +100,3 @@ news:
 
       # 合集链接 https://www.miyoushe.com/ys/collection/2844432
       # 合集链接 https://www.miyoushe.com/ys/collection/2243776
-
-  - source: 地底Tv
-    collection_id: 
-      - 2342915
-
-      # 合集链接 https://www.miyoushe.com/ys/collection/2342915

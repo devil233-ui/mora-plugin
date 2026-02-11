@@ -1,2 +1,11 @@
-#是否开启合并转发 默认开启 0为拼接消息
+# 是否开启合并转发，默认开启，0为关闭（使用拼接消息）
 forwardMsg: 1
+
+# 日志开关
+# false = 关闭（不显示 logger.log 日志）
+# true = 开启（显示 logger.log 日志）
+
+logError: false
+logLog: false
+logMark: false
+logWarn: false

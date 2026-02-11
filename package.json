@@ -1,0 +1,15 @@
+{
+  "name": "mora-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "提供角色攻略、配队、卡池等信息的摩拉插件",
+  "main": "index.js",
+  "author": "Rrrrrrray",
+  "isFork": true,
+  "forkAuthor": "jiu",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "yaml": "^2.3.4",
+    "cron": "^4.3.5"
+  }
+}

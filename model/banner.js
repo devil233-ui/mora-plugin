@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import moraBase from './moraBase.js'
 import moracfg from './config.js'
 import commonTools from './commonTools.js'
-import { Weapon } from '#miao.models'
+import { Weapon } from '../../miao-plugin/models/index.js'
 import { poolDetail, mixPoolDetail } from '../../miao-plugin/resources/meta-gs/info/index.js'
 import { poolDetailSr } from '../../miao-plugin/resources/meta-sr/info/index.js'
 
@@ -67,7 +67,7 @@ export default class banner extends moraBase {
     let typeName = 'char'
     const notUP = {
       gs: ['安柏', '凯亚', '丽莎', '刻晴', '莫娜', '七七', '迪卢克', '琴', '提纳里', '迪希雅', '梦见月瑞希'],
-      sr: ['姬子', '瓦尔特', '杰帕德', '布洛妮娅', '彦卿', '白露', '克拉拉'],
+      sr: ['姬子', '瓦尔特', '杰帕德', '布洛妮娅', '彦卿', '白露', '克拉拉', '希儿', '刃', '符玄'],
       zzz: ['猫又', '莱卡恩', '「11号」', '格莉丝', '珂蕾妲', '丽娜']
     }
 

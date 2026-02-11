@@ -5,6 +5,7 @@ import gsCfg from '../../genshin/model/gsCfg.js';
 import _ from 'lodash';
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from './setting.js'
 const _path = process.cwd();
 
 export default class roleGuide extends moraBase {
@@ -16,7 +17,38 @@ export default class roleGuide extends moraBase {
         this.game = this.e.game || 'gs'
 
         this.isSr = this.game === 'sr'
-        this.uploader = moracfg.getSetYaml(`${this.game === 'gs' ? 'r' : `${this.game}R`}oleGuides`, true)
+        const configName = `${this.game === 'gs' ? 'r' : `${this.game}R`}oleGuides`
+
+        // 先读取 user 目录获取 all 开关状态
+        let userConfig = moracfg.getfileYaml(moracfg.user, configName)
+        // 处理 all 值（支持 true/false/1/0）
+        const allEnabled = userConfig && (userConfig.all === true || userConfig.all === 1 || userConfig.all === 'true')
+
+        // 根据 all 开关决定读取哪个目录的配置
+        // all: true  -> 读取 default 目录（使用默认攻略）
+        // all: false -> 读取 user 目录（使用自定义攻略）
+        let rawConfig
+        if (allEnabled) {
+            logger.log(`[${this.game}] all=true，读取 default 目录默认攻略`)
+            rawConfig = moracfg.getfileYaml(moracfg.def, configName)
+        } else {
+            logger.log(`[${this.game}] all=false，读取 user 目录自定义攻略`)
+            rawConfig = userConfig
+        }
+
+        // 处理配置格式：原神是 {olds, news}，星铁/绝区零新格式是 {ALL, list}
+        if (this.game === 'gs') {
+            this.uploader = rawConfig
+        } else {
+            // 星铁/绝区零：支持新格式 {ALL, list} 和旧格式（直接数组）
+            if (rawConfig && Array.isArray(rawConfig.list)) {
+                this.uploader = rawConfig.list
+            } else if (Array.isArray(rawConfig)) {
+                this.uploader = rawConfig
+            } else {
+                this.uploader = []
+            }
+        }
         this.resPath = moracfg.getMoraPlus(this.game, 'role')
         this.path = `${moracfg.getMoraPath('data')}roleGuides`
     }
@@ -27,17 +59,17 @@ export default class roleGuide extends moraBase {
 
         //  适配多属性主角别名
 
-        // 方法1  方法1   从本地文件加载别名数据
+        //    从本地文件加载别名数据
         async function loadAliases() {
-            const filePath = path.join(`${_path}/plugins/mora-plugin/Strategyresources/moraothername/gsalias.json`); // JSON 文件的路径
+            const filePath = path.join(`${_path}/plugins/mora-plugin/resources/mora-plugin-res/moraothername/gsalias.json`); // JSON 文件的路径
             try {
                 const data = fs.readFileSync(filePath, 'utf8');
                 return JSON.parse(data);
             } catch (error) {
-                console.error('Failed to load aliases:', error);
-                return role; // 返回空对象作为兜底
+                logger.error('Failed to load aliases:', error);
+                return {}; // 返回空对象作为兜底
             }
-        }// 方法1  方法1   从本地文件加载别名数据
+        }//    从本地文件加载别名数据
 
 
         async function getFormalName(role) {        // 根据传入的值查找对应的正式名称
@@ -98,14 +130,14 @@ export default class roleGuide extends moraBase {
         //     if (_.isEmpty(role)) role = gsCfg.getRole(name, '', this.isSr)
         //     if (!role) return false
 
-        //    方法1 方法1 方法1 方法1       从本地文件加载别名数据
+        //     从本地文件加载别名数据
         async function loadAliases() {
-            const filePath = path.join(`${_path}/plugins/mora-plugin/Strategyresources/moraothername/sralias.json`); // JSON 文件的路径
+            const filePath = path.join(`${_path}/plugins/mora-plugin/resources/mora-plugin-res/moraothername/sralias.json`); // JSON 文件的路径
             try {
                 const data = fs.readFileSync(filePath, 'utf8');
                 return JSON.parse(data);
             } catch (error) {
-                console.error('Failed to load aliases:', error);
+                logger.error('Failed to load aliases:', error);
                 return role; // 返回空对象作为兜底
             }
         }
@@ -120,9 +152,6 @@ export default class roleGuide extends moraBase {
             return role;    // 如果没有找到匹配的键或值，返回原始值
         }
         role.name = await getFormalName(name);   // 获取正式名称并赋值给 role.name
-
-
-
 
         let atlas = `${_path}/plugins/Atlas/star-rail-atlas/material for role/${role.name}.png`;
         // 检查 material for role 目录是否存在
@@ -167,17 +196,17 @@ export default class roleGuide extends moraBase {
     async zzzStrategies(name, isUpdate) {
         let role = {};
 
-        //    方法1 方法1 方法1 方法1       从本地文件加载别名数据
+        //       从本地文件加载别名数据
         async function loadAliases() {
-            const filePath = path.join(`${_path}/plugins/mora-plugin/Strategyresources/moraothername/zzzalias.json`); // JSON 文件的路径
+            const filePath = path.join(`${_path}/plugins/mora-plugin/resources/mora-plugin-res/moraothername/zzzalias.json`); // JSON 文件的路径
             try {
                 const data = fs.readFileSync(filePath, 'utf8');
                 return JSON.parse(data);
             } catch (error) {
-                console.error('Failed to load aliases:', error);
+                logger.error('Failed to load aliases:', error);
                 return role; // 返回空对象作为兜底
             }
-        }        //    方法1 方法1 方法1 方法1       从本地文件加载别名数据
+        }        //       从本地文件加载别名数据
 
         async function getFormalName(role) {        // 根据传入的值查找对应的正式名称
             const defAlias = await loadAliases();
@@ -189,8 +218,6 @@ export default class roleGuide extends moraBase {
             return role;    // 如果没有找到匹配的键或值，返回原始值
         }
         role.name = await getFormalName(name);   // 获取正式名称并赋值给 role.name
-
-
 
         let add_dir = this.findPack(`${this.path}/add_ons`, role.name, this.game)
         let res_dir = this.findPack(`${this.resPath}/Guides`, role.name, this.game)
@@ -226,11 +253,11 @@ export default class roleGuide extends moraBase {
             zzz: '绝区零'
         }
         if (_.isEmpty(msg)) {
-            await this.e.reply(`暂无角色 ${zones[this.game]} 的攻略数据\n角色名正确吗？前缀符号正确吗？`, false, { at: false, recallMsg: 30 })
+            await this.e.reply(`${zones[this.game]} 暂无角色 ${name} 的攻略数据\n角色名正确吗？前缀符号正确吗？\n原神攻略发送 #胡桃攻略\n星铁攻略发送 *流萤攻略\n绝区零攻略发送 %柳攻略\n\n原神主角攻略发送 #风主攻略 #火主攻略`, false, { at: false, recallMsg: 30 })
             return false
         }
 
-        return await commonTools.makeMsg(this.e, msg, `${name}攻略 来啦~ \n（本攻略由 mora-plugin 插件提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
+        return await commonTools.makeMsg(this.e, msg, `${name}攻略 来啦~ \n（mora-plugin-fork 提供）\n仓库：https://gitee.com/mingdiandianzhu/data`)
     }
 
     async getHelp() {
@@ -305,7 +332,7 @@ export default class roleGuide extends moraBase {
     // 找本地图片
     findPack(path, name, game = '') {
         const gameDir = {
-            gs: '',
+            gs: '/GenshinImpact',
             sr: '/StarRail',
             zzz: '/ZenlessZoneZero'
         }
@@ -385,7 +412,7 @@ export default class roleGuide extends moraBase {
         // helper: 从本地 strategy JSON 目录中查找作者对应的 url
         const tryLocalStrategy = async () => {
             try {
-                const strategyDir = path.join(`${_path}/plugins/mora-plugin/Strategyresources/strategy`)
+                const strategyDir = path.join(`${_path}/plugins/mora-plugin/resources/mora-plugin-res/strategy`)
                 if (!fs.existsSync(strategyDir)) return null
 
                 const files = fs.readdirSync(strategyDir).filter(f => f.endsWith('.json'))
@@ -439,8 +466,8 @@ export default class roleGuide extends moraBase {
             const localUrl = await tryLocalStrategy()
             if (localUrl) {
                 logger.mark(`${this.e.logFnc} 从本地策略文件(${author.source})获取 ${name} 的图片，下载地址：${localUrl}`)
-                // 本地 json 内的链接一般为完整图片地址，不追加 this.oss
-                if (!await commonTools.download(localUrl, sfPath)) {
+                // 追加 this.oss 优化图片加载
+                if (!await commonTools.download(localUrl + this.oss, sfPath)) {
                     logger.warn(`${this.e.logFnc} 本地链接下载失败，回退到米游社抓取：${localUrl}`)
                     // 继续走米游社逻辑 below
                 } else {

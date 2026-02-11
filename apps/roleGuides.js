@@ -19,7 +19,7 @@ export class roleGuides extends plugin {
       priority: 5,
       rule: [
         {
-          reg: '^#?(星铁|绝区零)?(更2222新)?\\S+(攻略|一图流|配对|配队)$',
+          reg: '^#?(星铁|绝区零)?(更新)?\\S+(攻略|一图流|配对|配队)$',
           fnc: 'roleGuide'
         },
         {
