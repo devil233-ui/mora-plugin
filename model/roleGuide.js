@@ -10,10 +10,18 @@ const _path = process.cwd();
 
 export default class roleGuide extends moraBase {
 
+    /**
+     * 获取 OSS 参数（使用 getter 确保每次获取最新配置）
+     * 支持热加载：配置文件修改后自动生效
+     */
+    get oss() {
+        const config = moracfg.getConfigWithCache(moracfg.user, 'config')
+        return config.ossParams
+    }
+
     constructor(e) {
         super(e)
         this.url = 'https://bbs-api.mihoyo.com/post/wapi/getPostFullInCollection?&gids=2&order_type=2&collection_id='
-        this.oss = '?x-oss-process=image//resize,s_1200/quality,q_90/auto-orient,0/interlace,1/format,jpg'
         this.game = this.e.game || 'gs'
 
         this.isSr = this.game === 'sr'
@@ -85,13 +93,19 @@ export default class roleGuide extends moraBase {
         role.name = await getFormalName(name);
 
         let guide = _.concat(this.uploader.news, this.uploader.olds)
-        let res_dir = this.findPack(`${this.resPath}/Guides`, role.name)
-        let add_dir = this.findPack(`${this.path}/add_ons`, role.name)
-        let dir = this.dirPath(role.name, res_dir, add_dir)
+        let dir = this.dirPath(role.name, res_dir, this.game)
 
-        let atlas = `${_path}/plugins/Atlas/Genshin-Atlas/material for role/${role.name}.png`
-        let msg = [...res_dir]
-        if (fs.existsSync(atlas)) {
+        // 查找存在的 atlas 文件（支持多种扩展名和大小写）
+        const atlasPaths = []
+        for (const dir of ['Atlas', 'atlas']) {
+            for (const ext of ['png', 'jpg', 'webp']) {
+                atlasPaths.push(`${_path}/plugins/${dir}/Genshin-Atlas/material for role/${role.name}.${ext}`)
+            }
+        }
+        let atlas = this.findExistingPath(atlasPaths)
+        let msg = []
+
+        if (atlas) {
             msg.push(atlas)
         }
         let xf = true
@@ -153,27 +167,20 @@ export default class roleGuide extends moraBase {
         }
         role.name = await getFormalName(name);   // 获取正式名称并赋值给 role.name
 
-        let atlas = `${_path}/plugins/Atlas/star-rail-atlas/material for role/${role.name}.png`;
-        // 检查 material for role 目录是否存在
-        if (!fs.existsSync(`${_path}/plugins/Atlas/star-rail-atlas/material for role`)) {
-            // 如果 material for role 目录不存在，则使用 guide for role 目录
-            atlas = `${_path}/plugins/Atlas/star-rail-atlas/guide for role/${role.roleId}.png`;
-            // 如果 guide for role 目录中的文件也不存在，则尝试使用角色名称
-            if (!fs.existsSync(atlas)) {
-                atlas = `${_path}/plugins/Atlas/star-rail-atlas/guide for role/${role.name}.png`;
-            }
-        } else {
-            // 如果 material for role 目录存在，但文件不存在，则尝试使用角色名称
-            if (!fs.existsSync(atlas)) {
-                atlas = `${_path}/plugins/Atlas/star-rail-atlas/material for role/${role.roleId}.png`;
+        // 查找存在的 star-rail-atlas 文件（支持多种扩展名和大小写）
+        const srAtlasPaths = []
+        for (const dir of ['Atlas', 'atlas']) {
+            for (const ext of ['png', 'jpg', 'webp']) {
+                srAtlasPaths.push(`${_path}/plugins/${dir}/star-rail-atlas/material for role/${role.name}.${ext}`)
+                srAtlasPaths.push(`${_path}/plugins/${dir}/star-rail-atlas/material for role/${role.roleId}.${ext}`)
+                srAtlasPaths.push(`${_path}/plugins/${dir}/star-rail-atlas/guide for role/${role.name}.${ext}`)
+                srAtlasPaths.push(`${_path}/plugins/${dir}/star-rail-atlas/guide for role/${role.roleId}.${ext}`)
             }
         }
+        let atlas = this.findExistingPath(srAtlasPaths)
 
-        let add_dir = this.findPack(`${this.path}/add_ons`, role.name, this.game)
-        let res_dir = this.findPack(`${this.resPath}/Guides`, role.name, this.game)
-
-        let msg = [...res_dir]
-        if (fs.existsSync(atlas)) {
+        let msg = []
+        if (atlas) {
             msg.push(atlas)
             this.uploader = _.filter(this.uploader, v => v.source !== '听语惊花')
         }
@@ -189,7 +196,7 @@ export default class roleGuide extends moraBase {
             if (success) msg.push(dir[i])
         }
 
-        msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
+        msg = _.map(_.uniq(_.concat(msg)), v => segment.image(v))
         return await this.replyStrategies(msg, role.name)
     }
 
@@ -219,15 +226,20 @@ export default class roleGuide extends moraBase {
         }
         role.name = await getFormalName(name);   // 获取正式名称并赋值给 role.name
 
-        let add_dir = this.findPack(`${this.path}/add_ons`, role.name, this.game)
-        let res_dir = this.findPack(`${this.resPath}/Guides`, role.name, this.game)
 
         this.uploader = this.uploader.filter(v => !res_dir.find(r => r.includes(v.source)))
 
-        let msg = [...res_dir]
-        let atlas = `${_path}/plugins/Atlas/zzz-atlas/material for role/${role.name}.jpg`
+        let msg = []
+        // 查找存在的 zzz-atlas 文件（支持多种扩展名和大小写）
+        const zzzAtlasPaths = []
+        for (const dir of ['Atlas', 'atlas']) {
+            for (const ext of ['png', 'jpg', 'webp']) {
+                zzzAtlasPaths.push(`${_path}/plugins/${dir}/zzz-atlas/material for role/${role.name}.${ext}`)
+            }
+        }
+        let atlas = this.findExistingPath(zzzAtlasPaths)
         let remove = '角色材料'
-        if (fs.existsSync(atlas) && !res_dir.find(r => r.includes(remove))) {
+        if (atlas && !res_dir.find(r => r.includes(remove))) {
             msg.push(atlas)
             this.uploader = _.filter(this.uploader, v => v.source !== remove)
         }
@@ -243,7 +255,7 @@ export default class roleGuide extends moraBase {
             if (success) msg.push(dir[i])
         }
 
-        msg = _.map(_.uniq(_.concat(msg, add_dir)), v => segment.image(v))
+        msg = _.map(_.uniq(_.concat(msg)), v => segment.image(v))
         return await this.replyStrategies(msg, role.name)
     }
     async replyStrategies(msg, name) {
@@ -352,7 +364,7 @@ export default class roleGuide extends moraBase {
     }
 
     /** 路径处理 */
-    dirPath(name, res, add) {
+    dirPath(name, res, add, game = '') {
         // 适配miaoYZ
         let defpath = `${_path}/temp/strategy/`
         if (!fs.existsSync(defpath)) {
@@ -363,10 +375,18 @@ export default class roleGuide extends moraBase {
         let news = _.map(this.uploader.news, (v) => v.source)
         let dir = _.take(fs.readdirSync(defpath), 4)
 
+        // 游戏目录映射
+        const gameDir = {
+            gs: 'GenshinImpact',
+            sr: 'StarRail',
+            zzz: 'ZenlessZoneZero'
+        }
+        const subDir = gameDir[game] || ''
+
         let _dir = []
         // news
         _.each(news, (n) => {
-            let npath = `${this.path}/${n}/${name}.jpg`
+            let npath = subDir ? `${this.path}/${n}/${subDir}/${name}.jpg` : `${this.path}/${n}/${name}.jpg`
             _.each(res, (r) => {
                 if (_.includes(r, n)) {
                     npath = r
@@ -554,5 +574,17 @@ export default class roleGuide extends moraBase {
             await this.e.reply(moracfg.resNotFound, true)
             return false
         }
+    }
+
+    /**
+     * 查找存在的路径（支持多个候选路径）
+     * @param {string[]} paths 候选路径数组
+     * @returns {string|null} 第一个存在的路径或 null
+     */
+    findExistingPath(paths) {
+        for (const p of paths) {
+            if (fs.existsSync(p)) return p
+        }
+        return null
     }
 }

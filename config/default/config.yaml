@@ -9,3 +9,8 @@ logError: false
 logLog: false
 logMark: false
 logWarn: false
+
+# OSS图片处理参数配置
+# 用于优化图片加载速度和质量的阿里云OSS处理参数
+# 默认：?x-oss-process=image//resize,s_1200/quality,q_90/auto-orient,0/interlace,1/format,jpg
+ossParams: '?x-oss-process=image//resize,s_1200/quality,q_90/auto-orient,0/interlace,1/format,jpg'

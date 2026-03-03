@@ -62,6 +62,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'ossParams',
+          label: 'OSS图片处理参数',
+          bottomHelpMessage: '【请询问ai解析修改】阿里云OSS图片处理参数，用于优化图片加载速度和质量',
+          component: 'Input'
+        },
+        {
           component: 'SOFT_GROUP_BEGIN',
           label: '帮助指令配置'
         },
@@ -470,7 +476,7 @@ export function supportGuoba() {
           logger.log('处理后的配置数据:', JSON.stringify(processedData, null, 2))
           await configManager.saveAllConfig(processedData)
           logger.log('配置保存成功')
-          return Result.ok({}, '保存成功~')
+          return Result.ok({}, '保存成功~ Ciallo～(∠・ω )⌒☆~')
         } catch (error) {
           logger.error('保存配置失败', error)
           return Result.error(`保存失败: ${error.message}`)

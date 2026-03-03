@@ -339,6 +339,7 @@ class ConfigManager {
       logLog: config.logLog === true || config.logLog === 1 || config.logLog === 'true',
       logMark: config.logMark !== false,
       logWarn: config.logWarn !== false,
+      ossParams: config.ossParams !== undefined ? config.ossParams : '?x-oss-process=image//resize,s_1200/quality,q_90/auto-orient,0/interlace,1/format,jpg',
       help: help || { user: [], master: [] },
       roleGuides: roleGuides || { olds: {}, news: [] },
       srRoleGuides: srRoleGuidesData,
@@ -375,9 +376,9 @@ class ConfigManager {
   async saveAllConfig(data) {
     const promises = []
 
-    // 将 forwardMsg 和 log 配置保存到 config.yaml
-    const logFields = ['forwardMsg', 'logError', 'logLog', 'logMark', 'logWarn']
-    const hasLogConfig = logFields.some(field => data[field] !== undefined)
+    // 将基础配置保存到 config.yaml（包含 forwardMsg、日志配置、OSS参数等）
+    const configFields = ['forwardMsg', 'logError', 'logLog', 'logMark', 'logWarn', 'ossParams']
+    const hasLogConfig = configFields.some(field => data[field] !== undefined)
     
     if (hasLogConfig) {
       const configToSave = {}
@@ -403,6 +404,12 @@ class ConfigManager {
       if (data.logWarn !== undefined) {
         logger.log(`保存配置: logWarn`, data.logWarn)
         configToSave.logWarn = data.logWarn
+      }
+      
+      // OSS 图片处理参数
+      if (data.ossParams !== undefined) {
+        logger.log(`保存配置: ossParams`, data.ossParams)
+        configToSave.ossParams = data.ossParams
       }
       
       // 兼容旧配置
