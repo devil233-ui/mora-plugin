@@ -226,9 +226,6 @@ export default class roleGuide extends moraBase {
         }
         role.name = await getFormalName(name);   // 获取正式名称并赋值给 role.name
 
-
-        this.uploader = this.uploader.filter(v => !res_dir.find(r => r.includes(v.source)))
-
         let msg = []
         // 查找存在的 zzz-atlas 文件（支持多种扩展名和大小写）
         const zzzAtlasPaths = []

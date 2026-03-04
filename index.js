@@ -16,7 +16,7 @@ if (isV3) {
 
 export const mora = index.mora || {}
 
-logger.info(`摩拉插件${moraVer}修改版 初始化~`)
+logger.info(`摩拉插件${moraVer}fork 初始化~`)
 
 /** V3导入插件 */
 const files = fs.readdirSync('./plugins/mora-plugin/apps').filter(file => file.endsWith('.js'))
