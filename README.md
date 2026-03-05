@@ -1,4 +1,11 @@
-# Mora-Plugin
+# Mora-Plugin-fork 【致谢摩拉佬】
+
+### 新增功能与说明
+
+1. 攻略功能强制绑定资源库（执行 #更新摩拉资源 下载）
+2. 添加了网页配置攻略源与图片压缩参数
+
+# Mora-Plugin【原版说明】  
 Mora-Plugin是一个Yunzai-Bot的插件
 仅用于自我学习其他优秀插件
 

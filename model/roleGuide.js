@@ -93,7 +93,7 @@ export default class roleGuide extends moraBase {
         role.name = await getFormalName(name);
 
         let guide = _.concat(this.uploader.news, this.uploader.olds)
-        let dir = this.dirPath(role.name, res_dir, this.game)
+        let dir = this.dirPath(role.name, '', '', this.game)
 
         // 查找存在的 atlas 文件（支持多种扩展名和大小写）
         const atlasPaths = []
@@ -236,7 +236,7 @@ export default class roleGuide extends moraBase {
         }
         let atlas = this.findExistingPath(zzzAtlasPaths)
         let remove = '角色材料'
-        if (atlas && !res_dir.find(r => r.includes(remove))) {
+        if (atlas) {
             msg.push(atlas)
             this.uploader = _.filter(this.uploader, v => v.source !== remove)
         }
@@ -426,14 +426,20 @@ export default class roleGuide extends moraBase {
      * @param {Object} author 作者（必须包含 source、collection_id 等）
      */
     async getImg(name, author, sfPath, filter = '') {
-        // helper: 从本地 strategy JSON 目录中查找作者对应的 url
+        // helper: 从本地 strategy JSON 目录中查找作者对应的 url 并下载
         const tryLocalStrategy = async () => {
             try {
                 const strategyDir = path.join(`${_path}/plugins/mora-plugin/resources/mora-plugin-res/strategy`)
                 if (!fs.existsSync(strategyDir)) return null
 
                 const files = fs.readdirSync(strategyDir).filter(f => f.endsWith('.json'))
-                const gameKey = this.isSr ? 'StarRail' : (this.game === 'zzz' ? 'ZenlessZoneZero' : '')
+                // 游戏类型映射
+                const gameKeyMap = {
+                    'gs': 'GenshinImpact',
+                    'sr': 'StarRail',
+                    'zzz': 'ZenlessZoneZero'
+                }
+                const gameKey = gameKeyMap[this.game] || 'GenshinImpact'
 
                 for (const file of files) {
                     const fp = path.join(strategyDir, file)
@@ -456,10 +462,10 @@ export default class roleGuide extends moraBase {
                     for (const [authorKey, authorVal] of Object.entries(json)) {
                         if (!authorKey) continue
                         // 必须匹配作者名，保证作者正确
-                        if (authorKey !== author.source) continue
+                        if (!author || authorKey !== author.source) continue
 
-                        // authorVal 结构预期包含 gameKey ('' / 'StarRail' / 'ZenlessZoneZero') -> array of {name, link}
-                        const list = (authorVal && (authorVal[gameKey] || authorVal[''])) || []
+                        // authorVal 结构预期包含 gameKey ('GenshinImpact' / 'StarRail' / 'ZenlessZoneZero') -> array of {name, link}
+                        const list = (authorVal && authorVal[gameKey]) || []
                         if (!Array.isArray(list)) continue
 
                         // 尝试精确匹配 name > 包含匹配作为降级
@@ -467,6 +473,34 @@ export default class roleGuide extends moraBase {
                         if (!entry) entry = list.find(i => i.name && i.name.includes(name))
 
                         if (entry && entry.link) {
+                            // 拼接 OSS 参数优化图片下载
+                            const downloadUrl = entry.link + this.oss
+                            // 找到匹配项，下载图片
+                            logger.mark(`${this.e.logFnc} 从本地策略文件(${author.source})获取 ${name} 的图片，下载地址：${downloadUrl}`)
+
+                            // 确保目录存在
+                            const dir = path.dirname(sfPath)
+                            if (!fs.existsSync(dir)) {
+                                fs.mkdirSync(dir, { recursive: true })
+                            }
+
+                            // 下载图片
+                            try {
+                                const response = await fetch(downloadUrl)
+                                if (response.ok) {
+                                    const arrayBuffer = await response.arrayBuffer()
+                                    const buffer = Buffer.from(arrayBuffer)
+                                    fs.writeFileSync(sfPath, buffer)
+                                    logger.mark(`${this.e.logFnc} 下载本地策略图片成功：${author.source}-${name}`)
+                                    return true
+                                } else {
+                                    logger.warn(`${this.e.logFnc} 下载本地策略图片失败，HTTP状态：${response.status}`)
+                                }
+                            } catch (downloadErr) {
+                                logger.warn(`${this.e.logFnc} 下载本地策略图片异常：${downloadErr.message}`)
+                            }
+
+                            // 下载失败，返回原始 link 让上层继续尝试（上层会自行拼接 oss）
                             return entry.link
                         }
                     }
@@ -480,18 +514,22 @@ export default class roleGuide extends moraBase {
 
         // 先试本地
         try {
-            const localUrl = await tryLocalStrategy()
-            if (localUrl) {
-                logger.mark(`${this.e.logFnc} 从本地策略文件(${author.source})获取 ${name} 的图片，下载地址：${localUrl}`)
-                // 追加 this.oss 优化图片加载
-                if (!await commonTools.download(localUrl + this.oss, sfPath)) {
-                    logger.warn(`${this.e.logFnc} 本地链接下载失败，回退到米游社抓取：${localUrl}`)
+            const localResult = await tryLocalStrategy()
+            if (localResult === true) {
+                // 下载成功
+                return true
+            } else if (typeof localResult === 'string') {
+                // 返回了 url 但下载失败，尝试用 commonTools 下载
+                logger.mark(`${this.e.logFnc} 尝试用 commonTools 下载：${localResult}`)
+                if (!await commonTools.download(localResult + this.oss, sfPath)) {
+                    logger.warn(`${this.e.logFnc} 本地链接下载失败，回退到米游社抓取：${localResult}`)
                     // 继续走米游社逻辑 below
                 } else {
-                    logger.mark(`${this.e.logFnc} 下载本地策略图片成功：${author.source}-${name}`)
+                    logger.mark(`${this.e.logFnc} 下载本地策略图片成功：${author?.source || '未知作者'}-${name}`)
                     return true
                 }
             }
+            // localResult 为 null，继续走米游社逻辑
         } catch (err) {
             logger.warn(`尝试本地策略下载时发生异常：${err}`)
             // 继续到米游社抓取
