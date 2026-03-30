@@ -205,7 +205,7 @@ export function supportGuoba() {
         {
           field: 'roleGuidesDefaultView',
           label: '攻略数据源（默认）',
-          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（只读）',
+          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（当前栏只读）',
           component: 'GSubForm',
           vIf: '$config.roleGuides.all',
           componentProps: {
@@ -301,7 +301,7 @@ export function supportGuoba() {
         {
           field: 'srRoleGuidesDefaultView',
           label: '攻略数据源（默认）',
-          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（只读）',
+          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（当前栏只读）',
           component: 'GSubForm',
           vIf: '$config.srRoleGuidesAll',
           componentProps: {
@@ -397,7 +397,7 @@ export function supportGuoba() {
         {
           field: 'zzzRoleGuidesDefaultView',
           label: '攻略数据源（默认）',
-          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（只读）',
+          bottomHelpMessage: '当前使用默认攻略源，如需自定义请关闭上方开关（当前栏只读）',
           component: 'GSubForm',
           vIf: '$config.zzzRoleGuidesAll',
           componentProps: {

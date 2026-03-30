@@ -6,7 +6,7 @@ import moraBase from './moraBase.js'
 import moracfg from './config.js'
 import commonTools from './commonTools.js'
 import { Weapon } from '../../miao-plugin/models/index.js'
-import { poolDetail, mixPoolDetail } from '../../miao-plugin/resources/meta-gs/info/index.js'
+import { poolDetail, mixPoolDetail } from '../../miao-plugin/resources/meta-gs/info/pool.js'
 import { poolDetailSr } from '../../miao-plugin/resources/meta-sr/info/index.js'
 
 export default class banner extends moraBase {
@@ -120,12 +120,29 @@ export default class banner extends moraBase {
     const { type, name, typeName } = banner
 
     let miaoPool = []
-    if (this.game === 'gs') miaoPool = poolDetail
+    if (this.game === 'gs') miaoPool = _.concat(poolDetail, mixPoolDetail)
     else if (this.game === 'sr') miaoPool = poolDetailSr
 
     const poolCfg = gsCfg.getdefSet('pool', type)
 
-    miaoPool = _(miaoPool).unionBy(poolCfg, 'to').uniqBy('from').orderBy(['from', 'to'], ['desc', 'asc']).value()
+    // 使用函数式调用替代链式调用，避免 unionBy is not a function 错误
+    const getPoolKey = (pool) => JSON.stringify({
+      from: pool.from,
+      to: pool.to,
+      version: pool.version,
+      half: pool.half,
+      title: pool.title,
+      name: pool.name,
+      five: pool.five,
+      four: pool.four,
+      char5: pool.char5,
+      char4: pool.char4,
+      weapon5: pool.weapon5,
+      weapon4: pool.weapon4
+    })
+    const unioned = _.concat(miaoPool, poolCfg)
+    const uniqed = _.uniqBy(unioned, getPoolKey)
+    miaoPool = _.orderBy(uniqed, ['from', 'to'], ['desc', 'asc'])
 
     const rarity = _.filter(miaoPool, v => {
       if (_.includes(v.five || v[`${typeName}5`], name)) return true
@@ -157,10 +174,16 @@ export default class banner extends moraBase {
     rarity.forEach(i => {
       let _pool = []
       if (i.version && i.half) _pool.push(`所属版本：${i.version} ${i.half}`)
+      if (i.title) _pool.push(`集录祈愿：${i.title}`)
       if (i.name) _pool.push(`卡池名称：${i.name.replace('|', '，')}`)
+
+      // 安全获取四星UP数据，防止undefined错误
+      const fiveStar = (i.five || i[`${typeName}5`]) || []
+      const fourStar = (i.four || i[`${typeName}4`]) || []
+
       _pool = _.concat(_pool, [
-        `五星UP：${(i.five || i[`${typeName}5`]).join('，')}`,
-        `四星UP：${(i.four || i[`${typeName}4`]).join('，')}`,
+        `五星UP：${fiveStar.join('，')}`,
+        `四星UP：${fourStar.join('，')}`,
         `开始时间：${i.from}`,
         `结束时间：${i.to}`
       ])
