@@ -5,16 +5,21 @@ import _ from 'lodash'
 import fs from 'node:fs'
 import fetch from 'node-fetch'
 import path from 'path'
-import { CronJob } from 'cron'
+
 /**
  * 借鉴原云崽攻略代码
  * 攻略来自NGA@妮可少女
  */
 /**
  * 深渊/混沌/虚构/末日/幽境危战/剧诗/异相仲裁版本图片发送，支持别名
- * 数据来自NGA@妮可少女 
- * 玖、grok、GitHub copilot
+ * 数据来自 b站@妮可少女 b站@此号已封12138 (https://space.bilibili.com/40358750) @南卡
+ * 玖、grok、GitHub copilot、TRAE（kimi）
  */
+// 仓库配置（按优先级）
+const REPO_URLS = [
+  'https://cnb.cool/JIUXJIU/Abyss/-/git/raw/main',
+  'https://cnb.cool/JIUXJIU/AbyssBeta/-/git/raw/main'
+]
 
 export class abyssVersion extends plugin {
   constructor() {
@@ -60,7 +65,7 @@ export class abyssVersion extends plugin {
     }
   }
 
-  // 静态别名数据（正则和功能共用）
+  // 静态别名数据
   static getAliasesStatic() {
     return {
       ys: {
@@ -70,82 +75,15 @@ export class abyssVersion extends plugin {
       },
       sr: {
         "混沌回忆": ["混沌", "回忆", "深渊"],
-        "虚构叙事": ["虚构", "叙事"],
-        "末日幻影": ["末日", "幻影"],
-        "异相仲裁": ["异相", "仲裁"]
+        "虚构叙事": ["虚构", "叙事", "构事"],
+        "末日幻影": ["末日", "幻影", "末影"],
+        "异相仲裁": ["异相", "仲裁", "王棋"]
       }
     }
   }
 
-  // 实例别名，兼容旧逻辑（也可直接用静态的）
   getAliases() {
     return abyssVersion.getAliasesStatic();
-  }
-
-  // 下载单个图片
-  async downloadImage(imgV) {
-    const url = `https://homdgcat.wiki/Abyss/CH/${imgV}.png`
-    const local = path.join(this.abyssDir, `${imgV}.png`)
-    try {
-      logger.mark(`[深渊版本] 尝试下载图片: ${url}`)
-      const res = await fetch(url)
-      if (res.ok) {
-        const arrayBuffer = await res.arrayBuffer()
-        fs.writeFileSync(local, Buffer.from(arrayBuffer))
-        logger.mark(`[深渊版本] 图片下载成功: ${imgV}.png`)
-        return true
-      } else {
-        logger.warn(`[深渊版本] 图片下载失败 ${imgV}.png: HTTP ${res.status}`)
-      }
-    } catch (e) {
-      logger.error(`[深渊版本] 图片下载异常 ${imgV}.png:`, e)
-    }
-    return false
-  }
-
-  // 优先本地图片，没有则自动下载再发本地图片
-  async getImageSegment(imgV) {
-    const local = path.join(this.abyssDir, `${imgV}.png`)
-    if (fs.existsSync(local)) {
-      // 优先本地图片
-      logger.mark(`[深渊版本] 使用本地图片: ${imgV}.png`)
-      return segment.image(local)
-    } else {
-      // 没有则自动下载图片
-      logger.mark(`[深渊版本] 本地图片不存在，尝试下载: ${imgV}.png`)
-      const downloaded = await this.downloadImage(imgV)
-      if (downloaded && fs.existsSync(local)) {
-        logger.mark(`[深渊版本] 下载成功，使用下载的图片: ${imgV}.png`)
-        return segment.image(local)
-      } else {
-        // 下载失败时不发送图片
-        logger.warn(`[深渊版本] 图片获取失败，跳过发送: ${imgV}.png`)
-        return null
-      }
-    }
-  }
-
-  // 获取 Gitee 剧诗图片
-  async getJuShiImageSegments(version) {
-    let baseUrl = "https://gitee.com/mingdiandianzhu/miaoresources/raw/master/abyss/"
-    let segList = [`+${version}`, `+${version}A`, `+${version}B`]
-    let imageSegments = []
-    for (let segVer of segList) {
-      let imgUrl = `${baseUrl}${segVer}.jpg`
-      try {
-        logger.mark(`[深渊版本] 检查剧诗图片: ${imgUrl}`)
-        let res = await fetch(imgUrl, { method: 'HEAD' })
-        if (res.ok) {
-          logger.mark(`[深渊版本] 剧诗图片存在，添加到发送列表: ${segVer}.jpg`)
-          imageSegments.push(segment.image(imgUrl))
-        } else {
-          logger.warn(`[深渊版本] 剧诗图片不存在，跳过: ${segVer}.jpg (HTTP ${res.status})`)
-        }
-      } catch (e) {
-        logger.error(`[深渊版本] 检查剧诗图片异常，跳过: ${segVer}.jpg`, e)
-      }
-    }
-    return imageSegments
   }
 
   // 获取标准名称（支持别名）
@@ -156,19 +94,101 @@ export class abyssVersion extends plugin {
         return key
       }
     }
-    return role // 未找到别名返回原名
+    return role
   }
 
-  // 判断是否为某挑战类型（支持别名）
+  // 判断是否为某挑战类型
   matchType(type, game, target) {
     const formalName = this.getFormalName(type, game)
     return formalName === target
   }
 
+  // 计算编号
+  // 始终返回字符串数组
+  calculateNumber(version, formalAbyss, game) {
+    // 异相仲裁、幽境危战：直接使用数字
+    if (formalAbyss === '异相仲裁' || formalAbyss === '幽境危战') {
+      return [version]
+    }
+
+    // 星铁：混沌回忆、虚构叙事、末日幻影
+    if (game === 'sr' && ['混沌回忆', '虚构叙事', '末日幻影'].includes(formalAbyss)) {
+      const versionMap = abyssVersion.getVersionMap()
+
+      // 优先检查固定映射表
+      if (versionMap[formalAbyss] && versionMap[formalAbyss][version]) {
+        const mappedValue = versionMap[formalAbyss][version]
+        // 支持数组或字符串
+        return Array.isArray(mappedValue) ? mappedValue : [mappedValue]
+      }
+
+      // 没有则自动推算（以4.0为基准）
+      const baseValues = {
+        '混沌回忆': 1030,
+        '虚构叙事': 2021,
+        '末日幻影': 3015
+      }
+      const baseValue = baseValues[formalAbyss]
+      if (baseValue && version.match(/^(\d+)\.(\d)$/)) {
+        let [vMain, vSub] = version.split('.').map(Number)
+        let offset = (vMain - 4) * 10 + vSub
+        return [String(baseValue + offset)]
+      }
+    }
+
+    // 原神：深境螺旋、幻想真境剧诗 - 格式为 数字/数字+A/B
+    if (game === 'ys') {
+      if (formalAbyss === '深境螺旋' || formalAbyss === '幻想真境剧诗') {
+        return [version, `${version}A`, `${version}B`]
+      }
+    }
+
+    return [version]
+  }
+
+  // 从仓库下载图片
+  async downloadFromRepo(repoUrl, standardName, number) {
+    const url = `${repoUrl}/${standardName}/${number}.png`
+    const local = path.join(this.abyssDir, `${standardName}_${number}.png`)
+
+    try {
+      logger.mark(`[深渊版本] 尝试下载: ${url}`)
+      const res = await fetch(url)
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer()
+        fs.writeFileSync(local, Buffer.from(arrayBuffer))
+        logger.mark(`[深渊版本] 下载成功: ${standardName}/${number}.png`)
+        return local
+      }
+    } catch (e) {
+      logger.error(`[深渊版本] 下载失败: ${url}`, e.message)
+    }
+    return null
+  }
+
+  // 获取图片（优先本地，没有则从仓库下载）
+  async getImage(standardName, number) {
+    const localFile = path.join(this.abyssDir, `${standardName}_${number}.png`)
+
+    // 优先本地
+    if (fs.existsSync(localFile)) {
+      logger.mark(`[深渊版本] 使用本地图片: ${standardName}/${number}.png`)
+      return localFile
+    }
+
+    // 从仓库下载（按优先级尝试）
+    for (const repoUrl of REPO_URLS) {
+      const downloaded = await this.downloadFromRepo(repoUrl, standardName, number)
+      if (downloaded) return downloaded
+    }
+
+    logger.warn(`[深渊版本] 所有仓库均无图片: ${standardName}/${number}.png`)
+    return null
+  }
+
   async abyssVersion() {
     await this.e.reply('查询中，请稍后', true, { recallMsg: 20 })
 
-    // 动态获取aliasList和typeReg
     const aliasList = Array.from(new Set(
       Object.values(this.getAliases()).flatMap(obj => Object.entries(obj).flatMap(([key, arr]) => [key, ...arr]))
     ));
@@ -180,80 +200,37 @@ export class abyssVersion extends plugin {
     let [, gameType, version, abyss] = match
     let game = gameType === '星铁' ? 'sr' : 'ys'
 
-    // 转换为标准名称
+    // 获取标准名称
     let formalAbyss = this.getFormalName(abyss, game)
-    if (['混沌回忆', '虚构叙事', '末日幻影', '异相仲裁'].includes(formalAbyss)) game = 'sr'
 
-    let imgVersion = version
-
-    // 处理幽境危战：版本号前加-
-    if (this.matchType(formalAbyss, game, '幽境危战')) {
-      imgVersion = '-' + version
-    } else if (this.matchType(formalAbyss, game, '幻想真境剧诗')) {
-      let juShiImages = await this.getJuShiImageSegments(version)
-      if (juShiImages.length > 0) {
-        let msg = [
-          `原神 ${version} ${formalAbyss}\n来源：妮可少女`
-        ]
-        juShiImages.forEach(seg => msg.push(seg))
-        await this.e.reply(msg)
-        return true
-      } else {
-        await this.e.reply(`暂无原神 ${version} 版本 ${formalAbyss} 图片`)
-        return false
-      }
-    } else if (game === 'sr') {
-      // 星铁挑战类型图片编号，3.6/3.7写死，后续自动推算
-      const srAbyssMap = {
-        '混沌回忆': { '3.6': '1027', '3.7': '1028' },
-        '虚构叙事': { '3.6': '2018', '3.7': '2019' },
-        '末日幻影': { '3.6': '3012', '3.7': '3013' },
-        '异相仲裁': { '3.6': '4001', '3.7': '4002' }
-      }
-      if (srAbyssMap[formalAbyss] && srAbyssMap[formalAbyss][version]) {
-        imgVersion = srAbyssMap[formalAbyss][version]
-      } else if (['混沌回忆', '虚构叙事', '末日幻影', '异相仲裁'].includes(formalAbyss)) {
-        const baseValues = {
-          '混沌回忆': 1027,
-          '虚构叙事': 2018,
-          '末日幻影': 3012,
-          '异相仲裁': 4001
-        }
-        const baseValue = baseValues[formalAbyss] || 0
-        if (baseValue && version.match(/^(\d+)\.(\d)$/)) {
-          let [vMain, vSub] = version.split('.').map(Number)
-          let offset = (vMain - 3) * 10 + (vSub - 6)
-          imgVersion = String(baseValue + offset)
-        }
-      }
+    // 根据挑战类型自动判断游戏
+    if (['混沌回忆', '虚构叙事', '末日幻影', '异相仲裁'].includes(formalAbyss)) {
+      game = 'sr'
+    } else if (['深境螺旋', '幻想真境剧诗', '幽境危战'].includes(formalAbyss)) {
+      game = 'ys'
     }
 
-    // 直接使用3个图片（优先本地，没有则自动下载再发本地）
+    // 计算编号（始终返回数组）
+    const numberList = this.calculateNumber(version, formalAbyss, game)
+
+    // 获取所有图片
     let imageSegments = []
-    if (game === 'ys' && this.matchType(formalAbyss, game, '深境螺旋')) {
-      logger.mark(`[深渊版本] 处理原神深境螺旋图片，版本: ${imgVersion}`)
-      let segList = [`${imgVersion}`, `${imgVersion}A`, `${imgVersion}B`]
-      for (let segVer of segList) {
-        let seg = await this.getImageSegment(segVer)
-        if (seg) imageSegments.push(seg)
+    for (const num of numberList) {
+      const imgPath = await this.getImage(formalAbyss, num)
+      if (imgPath) {
+        imageSegments.push(segment.image(imgPath))
       }
-    } else {
-      logger.mark(`[深渊版本] 处理${game === 'sr' ? '星铁' : '原神'}图片，版本: ${imgVersion}`)
-      let mainSeg = await this.getImageSegment(imgVersion)
-      if (mainSeg) imageSegments.push(mainSeg)
     }
 
     if (imageSegments.length > 0) {
-      logger.mark(`[深渊版本] 成功获取 ${imageSegments.length} 张图片，准备发送`)
-      let msg = [
-        `${game === 'sr' ? '星铁' : '原神'} ${version} ${formalAbyss}\n来源：妮可少女`
-      ]
+      logger.mark(`[深渊版本] 成功获取 ${imageSegments.length} 张图片`)
+      let msg = [`${game === 'sr' ? '星铁' : '原神'} ${version} ${formalAbyss}`]
       imageSegments.forEach(seg => msg.push(seg))
       await this.e.reply(msg)
       return true
     } else {
-      logger.warn(`[深渊版本] 未能获取任何图片: ${game === 'sr' ? '星铁' : '原神'} ${version} ${formalAbyss}`)
-      await this.e.reply(`暂无${game === 'sr' ? '星铁' : '原神'} ${version}版本的${formalAbyss}图片`)
+      logger.warn(`[深渊版本] 未能获取任何图片`)
+      await this.e.reply(`暂无${game === 'sr' ? '星铁' : '原神'} ${version} 版本 ${formalAbyss} 图片`)
       return false
     }
   }
@@ -294,16 +271,6 @@ export class abyssVersion extends plugin {
     await this.e.reply(segment.image(`file://${img}`))
     return true
   }
-  // 检查图片链接是否可访问
-  async checkImage(url) {
-    try {
-      const res = await fetch(url);
-      return res.ok;
-    } catch (e) {
-      logger.error(`[abyssVersion] 图片检查失败: ${url}, 错误: ${e.message}`);
-      return false;
-    }
-  }
   async checkRes(path) {
     if (!fs.existsSync(path)) {
       await this.e.reply(moracfg.resNotFound, true)
@@ -319,6 +286,15 @@ export class abyssVersion extends plugin {
       console.log('[Abyss] 已清理并重建 data/Abyss 目录')
     } catch (err) {
       console.error('[Abyss] 清理 data/Abyss 目录出错：', err)
+    }
+  }
+  // 固定的版本号映射表（可扩展）
+  // 支持一个版本对应单个编号或多个编号（数组）
+  static getVersionMap() {
+    return {
+      '混沌回忆': { '1.3': ['1001', '1002', '1003'], '1.4': ['1004', '1005', '1006'], '1.5': ['1007', '1008'], '1.6': ['1009', '1010'], '2.0': ['1011', '1012'], '2.1': ['1013', '1014'], '2.7': ['1020'], '3.0': ['1021'], '3.8': ['1029'], '4.0': ['1030'] },
+      '虚构叙事': { '1.6': ['2003'], '2.0': ['2004'], '2.7': ['2011'], '3.0': ['2012'], '3.8': ['2020'], '4.0': ['2021'] },
+      '末日幻影': { '2.7': ['3005'], '3.0': ['3006'], '3.8': ['3014'], '4.0': ['3015'] }
     }
   }
 }

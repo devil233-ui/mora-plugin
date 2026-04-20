@@ -40,10 +40,7 @@ export default class banner extends moraBase {
 
   async searchBanners (query) {
     let name = this.getBanner(query)
-    if (!name) {
-      await this.e.reply('常驻角色不支持查询')
-      return false
-    }
+    if (!name) return false
 
     let pool = this.getPool(name)
     if (!pool) return false
@@ -67,15 +64,19 @@ export default class banner extends moraBase {
     let typeName = 'char'
     const notUP = {
       gs: ['安柏', '凯亚', '丽莎', '刻晴', '莫娜', '七七', '迪卢克', '琴', '提纳里', '迪希雅', '梦见月瑞希'],
-      sr: ['姬子', '瓦尔特', '杰帕德', '布洛妮娅', '彦卿', '白露', '克拉拉', '希儿', '刃', '符玄'],
+      sr: ['姬子', '瓦尔特', '杰帕德', '布洛妮娅', '彦卿', '白露', '克拉拉'],
       zzz: ['猫又', '莱卡恩', '「11号」', '格莉丝', '珂蕾妲', '丽娜']
     }
 
     let role = gsCfg.getRole(name, '', false, this.game)
+    let isPermanent = false
     if (role) {
       // 角色
       name = role.name
-      if (_.some(notUP, v => v.includes(name))) return false
+      // 检查是否为常驻角色
+      if (_.some(notUP, v => v.includes(name))) {
+        isPermanent = true
+      }
     } else {
       // 武器
       type = pool[this.game][1]
@@ -83,7 +84,7 @@ export default class banner extends moraBase {
       typeName = 'weapon'
     }
 
-    return { type, name, typeName }
+    return { type, name, typeName, isPermanent }
   }
 
   /**
@@ -117,7 +118,7 @@ export default class banner extends moraBase {
    * @returns 卡池
    */
   getPool (banner) {
-    const { type, name, typeName } = banner
+    const { type, name, typeName, isPermanent } = banner
 
     let miaoPool = []
     if (this.game === 'gs') miaoPool = _.concat(poolDetail, mixPoolDetail)
@@ -169,23 +170,57 @@ export default class banner extends moraBase {
       tips = `${next ? '下' : '当'}期UP，${elapsed}天${next ? '开启' : '结束'}卡池`
     }
 
-    // 整合卡池内容
-    let pool = []
-    rarity.forEach(i => {
-      let _pool = []
-      if (i.version && i.half) _pool.push(`所属版本：${i.version} ${i.half}`)
-      if (i.title) _pool.push(`集录祈愿：${i.title}`)
-      if (i.name) _pool.push(`卡池名称：${i.name.replace('|', '，')}`)
+    // 常驻角色特殊提示
+    if (isPermanent) {
+      tips += '【该角色已常驻】'
+    }
 
-      // 安全获取四星UP数据，防止undefined错误
-      const fiveStar = (i.five || i[`${typeName}5`]) || []
-      const fourStar = (i.four || i[`${typeName}4`]) || []
+    // 整合卡池内容：按时间段合并（from+to 相同的视为同一卡池）
+    const groupedByTime = _.groupBy(rarity, (i) => `${i.from}_${i.to}`)
+
+    let pool = []
+    Object.values(groupedByTime).forEach(group => {
+      let _pool = []
+
+      // 合并同一时间段的所有信息
+      const versions = []
+      const titles = []
+      const names = []
+      let fiveStar = []
+      let fourStar = []
+      let fromTime = ''
+      let toTime = ''
+
+      group.forEach(i => {
+        if (i.version && i.half && !versions.includes(`${i.version} ${i.half}`)) {
+          versions.push(`${i.version} ${i.half}`)
+        }
+        if (i.title && !titles.includes(i.title)) {
+          titles.push(i.title)
+        }
+        if (i.name && !names.includes(i.name)) {
+          names.push(i.name.replace('|', '，'))
+        }
+        // 安全获取UP数据
+        const five = (i.five || i[`${typeName}5`]) || []
+        const four = (i.four || i[`${typeName}4`]) || []
+        // 合并去重
+        five.forEach(f => { if (!fiveStar.includes(f)) fiveStar.push(f) })
+        four.forEach(f => { if (!fourStar.includes(f)) fourStar.push(f) })
+        // 记录时间
+        fromTime = i.from
+        toTime = i.to
+      })
+
+      if (versions.length) _pool.push(`所属版本：${versions.join(' / ')}`)
+      if (titles.length) _pool.push(`集录祈愿：${titles.join('，')}`)
+      if (names.length) _pool.push(`卡池名称：${names.join('，')}`)
 
       _pool = _.concat(_pool, [
         `五星UP：${fiveStar.join('，')}`,
         `四星UP：${fourStar.join('，')}`,
-        `开始时间：${i.from}`,
-        `结束时间：${i.to}`
+        `开始时间：${fromTime}`,
+        `结束时间：${toTime}`
       ])
       pool.push(_pool.join('\n'))
     })
