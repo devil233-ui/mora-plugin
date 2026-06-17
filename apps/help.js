@@ -36,7 +36,7 @@ export class moraHelp extends plugin {
     this.task = {
       name: '摩拉资源更新检测',
       fnc: () => this.updateMoraRes(),
-      cron: '0 0 3 * * ?'
+      cron: '0 0 2 * * ?'
     }
     this.helpPath = moracfg.getMoraPath('def')
     this.resPath = moracfg.getMoraPath('plus')
