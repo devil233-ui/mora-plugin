@@ -486,7 +486,7 @@ export default class roleGuide extends moraBase {
 
                             // 下载图片
                             try {
-                                const response = await fetch(downloadUrl)
+                                const response = await commonTools.request(downloadUrl, { timeout: 15000, retry: 3 })
                                 if (response.ok) {
                                     const arrayBuffer = await response.arrayBuffer()
                                     const buffer = Buffer.from(arrayBuffer)
@@ -543,18 +543,20 @@ export default class roleGuide extends moraBase {
             return false
         }
 
-        for (const i of author.collection_id) {
-            msyRes.push(await commonTools.getFetchData(this.url + i))
-        }
-
+        // 并发取各合集：原来是一个个 await，Asgater 这类有两个合集的作者要多等一倍。
+        // 失败收成「这张图没有」，不要让整个指令报错。
         try {
-            msyRes = await Promise.all(msyRes)
+            msyRes = await Promise.all(
+                author.collection_id.map(i => commonTools.getFetchData(this.url + i))
+            )
         } catch (error) {
-            logger.error(`米游社接口报错：${error}}`)
+            logger.mark(`米游社接口报错，跳过 ${author.source} 的 ${name}：${error?.message}`)
             return false
         }
 
-        let posts = _.flatten(_.map(msyRes, item => item.data.posts))
+        // getFetchData 遇到非 2xx 会返回 false（米游社对裸请求可能直接 403），
+        // 这里必须过滤掉，否则下面取 .data 会抛异常把整条指令带崩。
+        let posts = _.flatten(_.map(_.compact(msyRes), item => item?.data?.posts ?? []))
         let url
         let _post = []
         for (let val of posts) {
